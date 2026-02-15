@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>My Restaurant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2E7D32">
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+<h2>My Restaurant Business Engine</h2>
+
+<div id="loginBox">
+  <input type="email" id="email" placeholder="Email"><br><br>
+  <input type="password" id="password" placeholder="Password"><br><br>
+  <button onclick="login()">Login</button>
+  <p id="message" style="color:red;"></p>
+</div>
+
+<div id="dashboard" style="display:none;">
+  <h3 id="welcome"></h3>
+  <button onclick="logout()">Logout</button>
+
+  <hr>
+  <h3>Add Item</h3>
+  <input type="text" id="itemName" placeholder="Item Name"><br><br>
+  <select id="itemType">
+    <option value="raw">Raw Material</option>
+    <option value="sale">Sale Item</option>
+  </select><br><br>
+  <input type="number" id="costPrice" placeholder="Cost Price"><br><br>
+  <input type="number" id="sellingPrice" placeholder="Selling Price"><br><br>
+  <input type="number" id="itemQty" placeholder="Quantity"><br><br>
+  <button onclick="addItem()">Add Item</button>
+
+  <hr>
+  <h3>Daily Report</h3>
+  <button onclick="generateReport()">Generate Report</button>
+  <button onclick="exportTodayPDF()">Export PDF</button>
+  <div id="report"></div>
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
