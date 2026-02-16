@@ -39,7 +39,7 @@ function logout() {
 }
 
 
-// ================= SMART ADD / DEDUCT ITEM =================
+// ================= PROFESSIONAL STOCK + SALES =================
 
 function addItem() {
 
@@ -54,53 +54,77 @@ function addItem() {
     return;
   }
 
-  const stockRef = db.collection("items").where("name", "==", name);
+  const itemsRef = db.collection("items").where("name", "==", name);
 
-  stockRef.get().then(snapshot => {
+  itemsRef.get().then(snapshot => {
 
     if (snapshot.empty) {
 
-      // New item
+      if (type === "sale") {
+        alert("Item does not exist in stock ❌");
+        return;
+      }
+
+      // New raw item
       db.collection("items").add({
         name: name,
-        type: type,
+        type: "raw",
         costPrice: cost,
         sellingPrice: selling,
         quantity: qty,
         createdAt: new Date()
       }).then(() => {
-        alert("New Item Added ✅");
+        alert("New Raw Item Added ✅");
         loadStock();
       });
 
     } else {
 
-      // Item exists → update quantity
       snapshot.forEach(doc => {
 
-        const existingQty = doc.data().quantity;
-        let newQty;
+        const data = doc.data();
+        const existingQty = data.quantity;
 
-        if (type === "sale") {
-          // Deduct stock
-          newQty = existingQty - qty;
+        if (type === "raw") {
 
-          if (newQty < 0) {
+          // Increase stock
+          const newQty = existingQty + qty;
+
+          db.collection("items").doc(doc.id).update({
+            quantity: newQty
+          }).then(() => {
+            alert("Stock Increased ✅");
+            loadStock();
+          });
+
+        } else {
+
+          // SALE LOGIC
+          if (existingQty < qty) {
             alert("Not enough stock ❌");
             return;
           }
 
-        } else {
-          // Add stock
-          newQty = existingQty + qty;
-        }
+          const newQty = existingQty - qty;
 
-        db.collection("items").doc(doc.id).update({
-          quantity: newQty
-        }).then(() => {
-          alert("Stock Updated ✅");
-          loadStock();
-        });
+          // Deduct stock
+          db.collection("items").doc(doc.id).update({
+            quantity: newQty
+          });
+
+          // Save sale record
+          db.collection("sales").add({
+            name: name,
+            quantity: qty,
+            sellingPrice: data.sellingPrice,
+            total: data.sellingPrice * qty,
+            date: new Date()
+          }).then(() => {
+            alert("Sale Recorded ✅");
+            loadStock();
+          });
+
+        }
 
       });
 
@@ -108,13 +132,11 @@ function addItem() {
 
   });
 
-  // Clear fields
   document.getElementById("itemName").value = "";
   document.getElementById("costPrice").value = "";
   document.getElementById("sellingPrice").value = "";
   document.getElementById("itemQty").value = "";
 }
-
 
 // ================= LOAD STOCK =================
 
@@ -149,34 +171,32 @@ function loadStock() {
 }
 
 
-// ================= DAILY REPORT =================
+// ================= PROFESSIONAL DAILY REPORT =================
 
 function generateReport() {
 
-  db.collection("items").get()
-  .then(snapshot => {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  db.collection("sales").get().then(snapshot => {
 
     let revenue = 0;
-    let expense = 0;
 
     snapshot.forEach(doc => {
 
       const data = doc.data();
+      const saleDate = data.date.toDate();
+      saleDate.setHours(0,0,0,0);
 
-      if (data.type === "sale") {
-        revenue += data.sellingPrice * data.quantity;
-      } else {
-        expense += data.costPrice * data.quantity;
+      if (saleDate.getTime() === today.getTime()) {
+        revenue += data.total;
       }
+
     });
 
-    const profit = revenue - expense;
-
     document.getElementById("report").innerHTML = `
-      <h4>Today's Summary</h4>
+      <h4>Today's Sales</h4>
       <p>Total Revenue: ₹${revenue}</p>
-      <p>Total Expense: ₹${expense}</p>
-      <p>Net Profit: ₹${profit}</p>
     `;
   });
 }
