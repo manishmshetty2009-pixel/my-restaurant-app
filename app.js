@@ -1,11 +1,12 @@
 // 🔥 REPLACE WITH YOUR FIREBASE VALUES
 var firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MSG_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
+  authDomain: "my-restaurant-7badd.firebaseapp.com",
+  projectId: "my-restaurant-7badd",
+  storageBucket: "my-restaurant-7badd.appspot.com",
+  messagingSenderId: "588063103672",
+  appId: "1:588063103672:web:ace926af186843cb56724d",
+  measurementId: "G-ZD9DZKNZLB"
 };
 
 firebase.initializeApp(firebaseConfig);
