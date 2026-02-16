@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>My Restaurant Business Engine</title>
+  <title>My Restaurant System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Firebase v8 -->
@@ -13,34 +13,16 @@
   <!-- QR Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
-  <!-- PDF Export -->
+  <!-- PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 15px;
-    }
-    input, select, button {
-      padding: 8px;
-      margin: 5px 0;
-      width: 100%;
-      max-width: 300px;
-    }
-    button {
-      cursor: pointer;
-    }
-    hr {
-      margin: 25px 0;
-    }
-    .card {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 5px;
-    }
+    body { font-family: Arial; padding: 15px; }
+    input, select, button { padding:8px; margin:5px 0; width:100%; max-width:300px; }
+    button { cursor:pointer; }
+    .card { border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:6px; }
+    hr { margin:25px 0; }
   </style>
-
 </head>
 
 <body>
@@ -59,55 +41,53 @@
 <div id="dashboard" style="display:none;">
 
   <button onclick="logout()">Logout</button>
-
-  <hr>
-<h3>Restaurant Settings</h3>
-<input type="text" id="restaurantName" placeholder="Enter Restaurant Name">
-<button onclick="saveRestaurantName()">Save Name</button>
-<p id="nameStatus" style="color:green;"></p>
-
-  
-  <hr>
-
-  <!-- QR Attendance -->
-  <h3>QR Attendance scanner</h3>
-  <div id="reader" style="width:300px;"></div>
-  <button onclick="startScanner()">Start Scanner</button>
-  <button onclick="stopScanner()">Stop Scanner</button>
+  <p><strong>Role:</strong> <span id="userRole"></span></p>
 
   <hr>
 
-  <!-- Add Item -->
-  <h3>Add Item</h3>
-
-  <input type="text" id="itemName" placeholder="Item Name">
-
-  <select id="itemType">
-    <option value="raw">Raw Material</option>
-    <option value="sale">Sale Item</option>
-  </select>
-
-  <input type="number" id="costPrice" placeholder="Cost Price">
-  <input type="number" id="sellingPrice" placeholder="Selling Price">
-  <input type="number" id="itemQty" placeholder="Quantity">
-
-  <button onclick="addItem()">Add Item</button>
+  <!-- ATTENDANCE -->
+  <div id="attendanceSection">
+    <h3>QR Attendance</h3>
+    <div id="reader" style="width:300px;"></div>
+    <button onclick="startScanner()">Start Scanner</button>
+    <button onclick="stopScanner()">Stop Scanner</button>
+  </div>
 
   <hr>
 
-  <!-- Daily Report -->
-  <h3>Daily Report</h3>
-  <button onclick="generateReport()">Generate Report</button>
-  <button onclick="exportPDF()">Export PDF</button>
+  <!-- STOCK -->
+  <div id="stockSection">
+    <h3>Add / Deduct Item</h3>
 
-  <div id="report"></div>
+    <input type="text" id="itemName" placeholder="Item Name">
+
+    <select id="itemType">
+      <option value="raw">Add Stock</option>
+      <option value="sale">Sell Item</option>
+    </select>
+
+    <input type="number" id="costPrice" placeholder="Cost Price">
+    <input type="number" id="sellingPrice" placeholder="Selling Price">
+    <input type="number" id="itemQty" placeholder="Quantity">
+
+    <button onclick="addItem()">Submit</button>
+
+    <hr>
+
+    <h3>Current Stock</h3>
+    <button onclick="loadStock()">Refresh Stock</button>
+    <div id="stockList"></div>
+  </div>
 
   <hr>
 
-  <!-- Stock Section -->
-  <h3>Current Stock</h3>
-  <button onclick="loadStock()">Refresh Stock</button>
-  <div id="stockList"></div>
+  <!-- REPORT -->
+  <div id="reportSection">
+    <h3>Daily Report</h3>
+    <button onclick="generateReport()">Generate</button>
+    <button onclick="exportPDF()">Export PDF</button>
+    <div id="report"></div>
+  </div>
 
 </div>
 
