@@ -5,62 +5,102 @@
   <title>My Restaurant Business Engine</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
+  <!-- QR Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- PDF Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+    }
+    input, select, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      max-width: 300px;
+    }
+    button {
+      cursor: pointer;
+    }
+    hr {
+      margin: 25px 0;
+    }
+    .card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+    }
+  </style>
+
 </head>
 
 <body>
 
 <h2>My Restaurant Business Engine</h2>
 
+<!-- LOGIN -->
 <div id="loginBox">
-  <input type="email" id="email" placeholder="Email"><br><br>
-  <input type="password" id="password" placeholder="Password"><br><br>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
   <button onclick="login()">Login</button>
   <p id="message" style="color:red;"></p>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard" style="display:none;">
 
   <button onclick="logout()">Logout</button>
 
   <hr>
+
+  <!-- QR Attendance -->
   <h3>QR Attendance Scanner</h3>
+  <div id="reader" style="width:300px;"></div>
   <button onclick="startScanner()">Start Scanner</button>
   <button onclick="stopScanner()">Stop Scanner</button>
-  <div id="reader" style="width:300px;"></div>
 
   <hr>
+
+  <!-- Add Item -->
   <h3>Add Item</h3>
 
-  <input type="text" id="itemName" placeholder="Item Name"><br><br>
+  <input type="text" id="itemName" placeholder="Item Name">
 
   <select id="itemType">
     <option value="raw">Raw Material</option>
     <option value="sale">Sale Item</option>
-  </select><br><br>
+  </select>
 
-  <input type="number" id="costPrice" placeholder="Cost Price"><br><br>
-  <input type="number" id="sellingPrice" placeholder="Selling Price"><br><br>
-  <input type="number" id="itemQty" placeholder="Quantity"><br><br>
+  <input type="number" id="costPrice" placeholder="Cost Price">
+  <input type="number" id="sellingPrice" placeholder="Selling Price">
+  <input type="number" id="itemQty" placeholder="Quantity">
 
   <button onclick="addItem()">Add Item</button>
 
   <hr>
+
+  <!-- Daily Report -->
   <h3>Daily Report</h3>
   <button onclick="generateReport()">Generate Report</button>
   <button onclick="exportPDF()">Export PDF</button>
+
   <div id="report"></div>
-  
+
   <hr>
-<h3>Current Stock</h3>
-<button onclick="loadStock()">Refresh Stock</button>
-<div id="stockList"></div>
+
+  <!-- Stock Section -->
+  <h3>Current Stock</h3>
+  <button onclick="loadStock()">Refresh Stock</button>
+  <div id="stockList"></div>
 
 </div>
 
