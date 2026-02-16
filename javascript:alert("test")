@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
   authDomain: "my-restaurant-7badd.firebaseapp.com",
   projectId: "my-restaurant-7badd",
-  storageBucket: "my-restaurant-7badd.appspot.com",
+  storageBucket: "my-restaurant-7badd.firebasestorage.app",
   messagingSenderId: "588063103672",
   appId: "1:588063103672:web:ace926af186843cb56724d"
 };
