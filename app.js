@@ -1,165 +1,216 @@
-// Firebase Imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-
-// 🔴 PASTE YOUR REAL FIREBASE CONFIG HERE
-const firebaseConfig = {
-  apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
-  authDomain: "my-restaurant-7badd.firebaseapp.com",
-  projectId: "my-restaurant-7badd",
-  storageBucket: "my-restaurant-7badd.firebasestorage.app",
-  messagingSenderId: "588063103672",
-  appId: "1:588063103672:web:ace926af186843cb56724d"
+// 🔥 REPLACE WITH YOUR REAL FIREBASE VALUES
+var firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MSG_ID",
+  appId: "YOUR_APP_ID"
 };
 
-alert("JS FILE LOADED");
+firebase.initializeApp(firebaseConfig);
+var db = firebase.firestore();
+var auth = firebase.auth();
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// ================= LOGIN =================
 
-// LOGIN
-window.login = async function () {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+function login() {
+  const email = emailInput("email");
+  const password = emailInput("password");
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      showDashboard();
+    })
+    .catch(error => {
+      document.getElementById("message").innerText = error.message;
+    });
+}
 
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-
-    loadStock();
-  } catch (error) {
-    alert(error.message);
-  }
-};
-
-// LOGOUT
-window.logout = async function () {
-  await signOut(auth);
+function logout() {
+  auth.signOut();
   location.reload();
-};
+}
 
-// ADD STOCK
-window.addStock = async function () {
-  const item = document.getElementById("itemName").value;
-  const qty = document.getElementById("itemQty").value;
+function showDashboard() {
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+}
 
-  if (!item || !qty) {
-    alert("Enter item and quantity");
-    return;
-  }
+function emailInput(id){
+  return document.getElementById(id).value;
+}
 
-  await addDoc(collection(db, "stock"), {
-    item: item,
-    quantity: Number(qty),
-    createdAt: new Date()
-  });
+// ================= ADD ITEM =================
 
-  document.getElementById("itemName").value = "";
-  document.getElementById("itemQty").value = "";
+function addItem() {
 
-  loadStock();
-};
+  const name = emailInput("itemName");
+  const type = document.getElementById("itemType").value;
+  const cost = Number(emailInput("costPrice"));
+  const selling = Number(emailInput("sellingPrice"));
+  const qty = Number(emailInput("itemQty"));
 
-// LOAD STOCK
-async function loadStock() {
-  const stockList = document.getElementById("stockList");
-  stockList.innerHTML = "";
+  const now = new Date();
 
-  const snapshot = await getDocs(collection(db, "stock"));
-
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    stockList.innerHTML += `<li>${data.item} - ${data.quantity}</li>`;
+  db.collection("items").add({
+    name: name,
+    type: type,
+    costPrice: cost,
+    sellingPrice: type === "sale" ? selling : 0,
+    quantity: qty,
+    date: now.toISOString().slice(0,10),
+    month: now.getMonth()+1,
+    year: now.getFullYear(),
+    time: now.toLocaleTimeString()
+  }).then(()=>{
+    alert("Item Added Successfully");
   });
 }
+
+// ================= CALCULATE REPORT =================
+
+function calculateReport(querySnapshot) {
+
+  let revenue = 0;
+  let expense = 0;
+
+  querySnapshot.forEach(doc => {
+    const data = doc.data();
+
+    if (data.type === "sale") {
+      revenue += data.sellingPrice * data.quantity;
+    } else {
+      expense += data.costPrice * data.quantity;
+    }
+  });
+
+  const profit = revenue - expense;
+
+  return { revenue, expense, profit };
+}
+
+// ================= DAILY REPORT =================
+
+function generateReport() {
+
+  const today = new Date().toISOString().slice(0,10);
+
+  db.collection("items")
+    .where("date", "==", today)
+    .get()
+    .then(snapshot => {
+
+      const result = calculateReport(snapshot);
+
+      showReport("Daily Report ("+today+")", result);
+    });
+}
+
+// ================= MONTHLY REPORT =================
+
+function generateMonthlyReport() {
+
+  const now = new Date();
+  const month = now.getMonth()+1;
+  const year = now.getFullYear();
+
+  db.collection("items")
+    .where("month","==",month)
+    .where("year","==",year)
+    .get()
+    .then(snapshot => {
+
+      const result = calculateReport(snapshot);
+      showReport("Monthly Report ("+month+"/"+year+")", result);
+    });
+}
+
+// ================= YEARLY REPORT =================
+
+function generateYearlyReport() {
+
+  const year = new Date().getFullYear();
+
+  db.collection("items")
+    .where("year","==",year)
+    .get()
+    .then(snapshot => {
+
+      const result = calculateReport(snapshot);
+      showReport("Yearly Report ("+year+")", result);
+    });
+}
+
+// ================= CUSTOM REPORT =================
+
+function generateCustomReport(date) {
+
+  db.collection("items")
+    .where("date","==",date)
+    .get()
+    .then(snapshot => {
+
+      const result = calculateReport(snapshot);
+      showReport("Custom Report ("+date+")", result);
+    });
+}
+
+// ================= SHOW REPORT =================
+
+function showReport(title, result){
+
+  document.getElementById("report").innerHTML = `
+    <h4>${title}</h4>
+    <p><strong>Total Revenue:</strong> ₹${result.revenue}</p>
+    <p><strong>Total Expense:</strong> ₹${result.expense}</p>
+    <p><strong>Net Profit:</strong> ₹${result.profit}</p>
+  `;
+}
+
+// ================= PDF EXPORT =================
+
+function exportTodayPDF() {
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const content = document.getElementById("report").innerText;
+
+  doc.text("My Restaurant Report", 20, 20);
+  doc.text(content, 20, 40);
+
+  doc.save("Restaurant_Report.pdf");
+}
+
 // ================= QR ATTENDANCE =================
 
-let html5QrCode;
+let qrScanner;
 
-window.startScanner = function () {
-  const readerElement = document.getElementById("reader");
+function startScanner() {
 
-  html5QrCode = new Html5Qrcode("reader");
+  qrScanner = new Html5Qrcode("reader");
 
-  Html5Qrcode.getCameras().then(devices => {
-    if (devices && devices.length) {
-      const cameraId = devices[0].id;
+  qrScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    qrCodeMessage => {
 
-      html5QrCode.start(
-        cameraId,
-        { fps: 10, qrbox: 250 },
-        qrCodeMessage => {
-          processAttendance(qrCodeMessage);
-        },
-        errorMessage => {
-          // ignore scan errors
-        }
-      );
+      const now = new Date();
+
+      db.collection("attendance").add({
+        staff: qrCodeMessage,
+        date: now.toISOString().slice(0,10),
+        time: now.toLocaleTimeString()
+      });
+
+      alert("Attendance Marked");
     }
-  }).catch(err => {
-    alert("Camera error: " + err);
-  });
-};
-
-window.stopScanner = function () {
-  if (html5QrCode) {
-    html5QrCode.stop();
-  }
-};
-
-async function processAttendance(qrData) {
-  try {
-
-    const data = JSON.parse(qrData);
-    const staffId = data.staffId;
-    const name = data.name;
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-
-    const monthDocId = `${year}-${month}`;
-
-    const attendanceRef = db.collection("attendance")
-      .doc(monthDocId)
-      .collection("staff")
-      .doc(staffId);
-
-    const docSnap = await attendanceRef.get();
-
-    let todayData = {};
-
-    if (docSnap.exists) {
-      todayData = docSnap.data()[day] || {};
-    }
-
-    if (!todayData.checkIn) {
-      todayData.checkIn = now.toLocaleTimeString();
-      document.getElementById("attendanceStatus").innerText =
-        name + " Checked In at " + todayData.checkIn;
-
-    } else if (!todayData.checkOut) {
-      todayData.checkOut = now.toLocaleTimeString();
-      document.getElementById("attendanceStatus").innerText =
-        name + " Checked Out at " + todayData.checkOut;
-
-    } else {
-      document.getElementById("attendanceStatus").innerText =
-        "Attendance already completed for today.";
-      return;
-    }
-
-    await attendanceRef.set({
-      [day]: todayData
-    }, { merge: true });
-
-  } catch (err) {
-    alert("Invalid QR code");
-  }
+  );
 }
+
+function stopScanner() {
+  if(qrScanner){
+    qrScanner.stop();
+  }
+    }
