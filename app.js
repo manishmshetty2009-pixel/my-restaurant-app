@@ -1,4 +1,4 @@
-// 🔥 REPLACE WITH YOUR REAL FIREBASE VALUES
+// 🔥 REPLACE WITH YOUR FIREBASE VALUES
 var firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",
@@ -15,12 +15,13 @@ var auth = firebase.auth();
 // ================= LOGIN =================
 
 function login() {
-  const email = emailInput("email");
-  const password = emailInput("password");
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
   auth.signInWithEmailAndPassword(email, password)
     .then(() => {
-      showDashboard();
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
     })
     .catch(error => {
       document.getElementById("message").innerText = error.message;
@@ -32,24 +33,15 @@ function logout() {
   location.reload();
 }
 
-function showDashboard() {
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
-}
-
-function emailInput(id){
-  return document.getElementById(id).value;
-}
-
 // ================= ADD ITEM =================
 
 function addItem() {
 
-  const name = emailInput("itemName");
+  const name = document.getElementById("itemName").value;
   const type = document.getElementById("itemType").value;
-  const cost = Number(emailInput("costPrice"));
-  const selling = Number(emailInput("sellingPrice"));
-  const qty = Number(emailInput("itemQty"));
+  const cost = Number(document.getElementById("costPrice").value);
+  const sell = Number(document.getElementById("sellingPrice").value);
+  const qty = Number(document.getElementById("itemQty").value);
 
   const now = new Date();
 
@@ -57,59 +49,66 @@ function addItem() {
     name: name,
     type: type,
     costPrice: cost,
-    sellingPrice: type === "sale" ? selling : 0,
+    sellingPrice: type === "sale" ? sell : 0,
     quantity: qty,
     date: now.toISOString().slice(0,10),
     month: now.getMonth()+1,
-    year: now.getFullYear(),
-    time: now.toLocaleTimeString()
+    year: now.getFullYear()
   }).then(()=>{
-    alert("Item Added Successfully");
+    alert("Item Added");
   });
 }
 
-// ================= CALCULATE REPORT =================
+// ================= REPORT LOGIC =================
 
-function calculateReport(querySnapshot) {
+function calculate(snapshot){
 
   let revenue = 0;
   let expense = 0;
 
-  querySnapshot.forEach(doc => {
+  snapshot.forEach(doc => {
     const data = doc.data();
 
-    if (data.type === "sale") {
+    if(data.type === "sale"){
       revenue += data.sellingPrice * data.quantity;
     } else {
       expense += data.costPrice * data.quantity;
     }
   });
 
-  const profit = revenue - expense;
-
-  return { revenue, expense, profit };
+  return {
+    revenue: revenue,
+    expense: expense,
+    profit: revenue - expense
+  };
 }
 
-// ================= DAILY REPORT =================
+function show(result, title){
 
-function generateReport() {
+  document.getElementById("report").innerHTML =
+    "<h4>"+title+"</h4>" +
+    "<p>Total Revenue: ₹"+result.revenue+"</p>" +
+    "<p>Total Expense: ₹"+result.expense+"</p>" +
+    "<p>Net Profit: ₹"+result.profit+"</p>";
+}
+
+// ================= DAILY =================
+
+function generateDaily(){
 
   const today = new Date().toISOString().slice(0,10);
 
   db.collection("items")
-    .where("date", "==", today)
+    .where("date","==",today)
     .get()
-    .then(snapshot => {
-
-      const result = calculateReport(snapshot);
-
-      showReport("Daily Report ("+today+")", result);
+    .then(snapshot=>{
+      show(calculate(snapshot),"Daily Report");
     });
 }
 
-// ================= MONTHLY REPORT =================
+// ================= MONTHLY =================
 
-function generateMonthlyReport() {
+function generateMonthly(){
 
   const now = new Date();
   const month = now.getMonth()+1;
@@ -119,87 +118,55 @@ function generateMonthlyReport() {
     .where("month","==",month)
     .where("year","==",year)
     .get()
-    .then(snapshot => {
-
-      const result = calculateReport(snapshot);
-      showReport("Monthly Report ("+month+"/"+year+")", result);
+    .then(snapshot=>{
+      show(calculate(snapshot),"Monthly Report");
     });
 }
 
-// ================= YEARLY REPORT =================
+// ================= YEARLY =================
 
-function generateYearlyReport() {
+function generateYearly(){
 
   const year = new Date().getFullYear();
 
   db.collection("items")
     .where("year","==",year)
     .get()
-    .then(snapshot => {
-
-      const result = calculateReport(snapshot);
-      showReport("Yearly Report ("+year+")", result);
+    .then(snapshot=>{
+      show(calculate(snapshot),"Yearly Report");
     });
 }
 
-// ================= CUSTOM REPORT =================
+// ================= PDF =================
 
-function generateCustomReport(date) {
-
-  db.collection("items")
-    .where("date","==",date)
-    .get()
-    .then(snapshot => {
-
-      const result = calculateReport(snapshot);
-      showReport("Custom Report ("+date+")", result);
-    });
-}
-
-// ================= SHOW REPORT =================
-
-function showReport(title, result){
-
-  document.getElementById("report").innerHTML = `
-    <h4>${title}</h4>
-    <p><strong>Total Revenue:</strong> ₹${result.revenue}</p>
-    <p><strong>Total Expense:</strong> ₹${result.expense}</p>
-    <p><strong>Net Profit:</strong> ₹${result.profit}</p>
-  `;
-}
-
-// ================= PDF EXPORT =================
-
-function exportTodayPDF() {
+function exportPDF(){
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
   const content = document.getElementById("report").innerText;
 
-  doc.text("My Restaurant Report", 20, 20);
-  doc.text(content, 20, 40);
-
+  doc.text(content, 20, 20);
   doc.save("Restaurant_Report.pdf");
 }
 
-// ================= QR ATTENDANCE =================
+// ================= QR SCANNER =================
 
-let qrScanner;
+let scanner;
 
-function startScanner() {
+function startScanner(){
 
-  qrScanner = new Html5Qrcode("reader");
+  scanner = new Html5Qrcode("reader");
 
-  qrScanner.start(
+  scanner.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    qrCodeMessage => {
+    (decodedText) => {
 
       const now = new Date();
 
       db.collection("attendance").add({
-        staff: qrCodeMessage,
+        staff: decodedText,
         date: now.toISOString().slice(0,10),
         time: now.toLocaleTimeString()
       });
@@ -209,8 +176,8 @@ function startScanner() {
   );
 }
 
-function stopScanner() {
-  if(qrScanner){
-    qrScanner.stop();
+function stopScanner(){
+  if(scanner){
+    scanner.stop();
   }
-    }
+}
