@@ -5,11 +5,11 @@ import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.c
 
 // 🔴 REPLACE WITH YOUR REAL FIREBASE CONFIG
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MSG_ID",
+  apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
+  authDomain: "my-restaurant-7badd.firebaseapp.com",
+  projectId: "my-restaurant-7badd",
+  storageBucket: "my-restaurant-7badd.appspot.com",
+  messagingSenderId: "588063103672",
   appId: "YOUR_APP_ID"
 };
 
