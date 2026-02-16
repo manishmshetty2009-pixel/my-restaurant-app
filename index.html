@@ -61,9 +61,16 @@
   <button onclick="logout()">Logout</button>
 
   <hr>
+<h3>Restaurant Settings</h3>
+<input type="text" id="restaurantName" placeholder="Enter Restaurant Name">
+<button onclick="saveRestaurantName()">Save Name</button>
+<p id="nameStatus" style="color:green;"></p>
+
+  
+  <hr>
 
   <!-- QR Attendance -->
-  <h3>QR Attendance Scanner</h3>
+  <h3>QR Attendance scanner</h3>
   <div id="reader" style="width:300px;"></div>
   <button onclick="startScanner()">Start Scanner</button>
   <button onclick="stopScanner()">Stop Scanner</button>
