@@ -1,4 +1,5 @@
-// 🔥 YOUR FIREBASE CONFIG
+// ================= FIREBASE CONFIG =================
+
 var firebaseConfig = {
   apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
   authDomain: "my-restaurant-7badd.firebaseapp.com",
@@ -9,6 +10,7 @@ var firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 var db = firebase.firestore();
 var auth = firebase.auth();
 
@@ -16,6 +18,7 @@ var auth = firebase.auth();
 // ================= LOGIN =================
 
 function login() {
+
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
@@ -23,6 +26,7 @@ function login() {
     .then(() => {
       document.getElementById("loginBox").style.display = "none";
       document.getElementById("dashboard").style.display = "block";
+      loadStock();
     })
     .catch(error => {
       document.getElementById("message").innerText = error.message;
@@ -38,74 +42,143 @@ function logout() {
 // ================= ADD ITEM =================
 
 function addItem() {
+
   const name = document.getElementById("itemName").value;
   const type = document.getElementById("itemType").value;
-  const cost = parseFloat(document.getElementById("costPrice").value);
-  const selling = parseFloat(document.getElementById("sellingPrice").value);
-  const qty = parseInt(document.getElementById("itemQty").value);
+  const cost = parseFloat(document.getElementById("costPrice").value) || 0;
+  const selling = parseFloat(document.getElementById("sellingPrice").value) || 0;
+  const qty = parseInt(document.getElementById("itemQty").value) || 0;
+
+  if (!name || qty <= 0) {
+    alert("Please enter valid item name and quantity");
+    return;
+  }
 
   db.collection("items").add({
     name: name,
     type: type,
-    cost: cost,
-    selling: selling,
-    qty: qty,
+    costPrice: cost,
+    sellingPrice: selling,
+    quantity: qty,
     date: new Date()
-  });
+  })
+  .then(() => {
+    alert("Item Added Successfully ✅");
 
-  alert("Item Added");
+    document.getElementById("itemName").value = "";
+    document.getElementById("costPrice").value = "";
+    document.getElementById("sellingPrice").value = "";
+    document.getElementById("itemQty").value = "";
+
+    loadStock();
+  })
+  .catch(error => {
+    alert(error.message);
+  });
+}
+
+
+// ================= LOAD STOCK =================
+
+function loadStock() {
+
+  db.collection("items").get()
+  .then(snapshot => {
+
+    let html = "";
+
+    if (snapshot.empty) {
+      html = "<p>No stock available</p>";
+    }
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+
+      html += `
+        <div class="card">
+          <strong>${data.name}</strong><br>
+          Type: ${data.type}<br>
+          Quantity: ${data.quantity}<br>
+          Cost: ₹${data.costPrice}<br>
+          Selling: ₹${data.sellingPrice}
+        </div>
+      `;
+    });
+
+    document.getElementById("stockList").innerHTML = html;
+  });
 }
 
 
 // ================= DAILY REPORT =================
 
 function generateReport() {
-  db.collection("items").get().then(snapshot => {
-    let total = 0;
+
+  db.collection("items").get()
+  .then(snapshot => {
+
+    let revenue = 0;
+    let expense = 0;
+
     snapshot.forEach(doc => {
+
       const data = doc.data();
+
       if (data.type === "sale") {
-        total += data.selling * data.qty;
+        revenue += data.sellingPrice * data.quantity;
+      } else {
+        expense += data.costPrice * data.quantity;
       }
     });
 
-    document.getElementById("report").innerHTML =
-      "<h4>Total Sales: ₹" + total + "</h4>";
+    const profit = revenue - expense;
+
+    document.getElementById("report").innerHTML = `
+      <h4>Today's Summary</h4>
+      <p>Total Revenue: ₹${revenue}</p>
+      <p>Total Expense: ₹${expense}</p>
+      <p>Net Profit: ₹${profit}</p>
+    `;
   });
 }
 
 
-// ================= PDF =================
+// ================= EXPORT PDF =================
 
 function exportPDF() {
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
+  const content = document.getElementById("report").innerText;
+
   doc.text("Restaurant Daily Report", 20, 20);
-  doc.text(document.getElementById("report").innerText, 20, 40);
-  doc.save("report.pdf");
+  doc.text(content, 20, 40);
+
+  doc.save("Restaurant_Report.pdf");
 }
 
 
-// ================= QR SCANNER =================
+// ================= QR ATTENDANCE =================
 
 let scanner;
 
 function startScanner() {
+
   scanner = new Html5Qrcode("reader");
 
   scanner.start(
-    { facingMode: "environment" }, // MAIN CAMERA
-    {
-      fps: 10,
-      qrbox: 250
-    },
-    qrCodeMessage => {
+    { facingMode: "environment" }, // back camera
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+
       db.collection("attendance").add({
-        staffId: qrCodeMessage,
+        staffId: decodedText,
         time: new Date()
       });
-      alert("Attendance Marked for " + qrCodeMessage);
+
+      alert("Attendance Marked for " + decodedText);
     }
   );
 }
@@ -115,33 +188,3 @@ function stopScanner() {
     scanner.stop();
   }
 }
-
-// ================= STOCK LIST =================
-
-function loadStock() {
-
-  db.collection("items").get().then((snapshot) => {
-
-    let stockHTML = "";
-
-    snapshot.forEach((doc) => {
-
-      let data = doc.data();
-
-      stockHTML += `
-        <div style="border:1px solid #ccc; padding:8px; margin:5px;">
-          <strong>${data.name}</strong><br>
-          Type: ${data.type}<br>
-          Quantity: ${data.quantity}<br>
-          Cost Price: ₹${data.costPrice}<br>
-          Selling Price: ₹${data.sellingPrice}
-        </div>
-      `;
-    });
-
-    document.getElementById("stockList").innerHTML = stockHTML;
-
-  }).catch((error) => {
-    console.log(error);
-  });
-      }
