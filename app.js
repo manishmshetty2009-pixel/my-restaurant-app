@@ -39,42 +39,80 @@ function logout() {
 }
 
 
-// ================= ADD ITEM =================
+// ================= SMART ADD / DEDUCT ITEM =================
 
 function addItem() {
 
-  const name = document.getElementById("itemName").value;
+  const name = document.getElementById("itemName").value.trim();
   const type = document.getElementById("itemType").value;
   const cost = parseFloat(document.getElementById("costPrice").value) || 0;
   const selling = parseFloat(document.getElementById("sellingPrice").value) || 0;
   const qty = parseInt(document.getElementById("itemQty").value) || 0;
 
   if (!name || qty <= 0) {
-    alert("Please enter valid item name and quantity");
+    alert("Enter valid item name and quantity");
     return;
   }
 
-  db.collection("items").add({
-    name: name,
-    type: type,
-    costPrice: cost,
-    sellingPrice: selling,
-    quantity: qty,
-    date: new Date()
-  })
-  .then(() => {
-    alert("Item Added Successfully ✅");
+  const stockRef = db.collection("items").where("name", "==", name);
 
-    document.getElementById("itemName").value = "";
-    document.getElementById("costPrice").value = "";
-    document.getElementById("sellingPrice").value = "";
-    document.getElementById("itemQty").value = "";
+  stockRef.get().then(snapshot => {
 
-    loadStock();
-  })
-  .catch(error => {
-    alert(error.message);
+    if (snapshot.empty) {
+
+      // New item
+      db.collection("items").add({
+        name: name,
+        type: type,
+        costPrice: cost,
+        sellingPrice: selling,
+        quantity: qty,
+        createdAt: new Date()
+      }).then(() => {
+        alert("New Item Added ✅");
+        loadStock();
+      });
+
+    } else {
+
+      // Item exists → update quantity
+      snapshot.forEach(doc => {
+
+        const existingQty = doc.data().quantity;
+        let newQty;
+
+        if (type === "sale") {
+          // Deduct stock
+          newQty = existingQty - qty;
+
+          if (newQty < 0) {
+            alert("Not enough stock ❌");
+            return;
+          }
+
+        } else {
+          // Add stock
+          newQty = existingQty + qty;
+        }
+
+        db.collection("items").doc(doc.id).update({
+          quantity: newQty
+        }).then(() => {
+          alert("Stock Updated ✅");
+          loadStock();
+        });
+
+      });
+
+    }
+
   });
+
+  // Clear fields
+  document.getElementById("itemName").value = "";
+  document.getElementById("costPrice").value = "";
+  document.getElementById("sellingPrice").value = "";
+  document.getElementById("itemQty").value = "";
 }
 
 
