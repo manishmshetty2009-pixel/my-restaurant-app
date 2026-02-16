@@ -115,3 +115,33 @@ function stopScanner() {
     scanner.stop();
   }
 }
+
+// ================= STOCK LIST =================
+
+function loadStock() {
+
+  db.collection("items").get().then((snapshot) => {
+
+    let stockHTML = "";
+
+    snapshot.forEach((doc) => {
+
+      let data = doc.data();
+
+      stockHTML += `
+        <div style="border:1px solid #ccc; padding:8px; margin:5px;">
+          <strong>${data.name}</strong><br>
+          Type: ${data.type}<br>
+          Quantity: ${data.quantity}<br>
+          Cost Price: ₹${data.costPrice}<br>
+          Selling Price: ₹${data.sellingPrice}
+        </div>
+      `;
+    });
+
+    document.getElementById("stockList").innerHTML = stockHTML;
+
+  }).catch((error) => {
+    console.log(error);
+  });
+      }
