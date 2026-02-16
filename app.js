@@ -24,10 +24,11 @@ function login() {
 
   auth.signInWithEmailAndPassword(email, password)
     .then(() => {
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-      loadStock();
-    })
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  loadStock();
+  loadRestaurantName();
+})
     .catch(error => {
       document.getElementById("message").innerText = error.message;
     });
@@ -211,12 +212,64 @@ function exportPDF() {
 
   const content = document.getElementById("report").innerText;
 
-  doc.text("Restaurant Daily Report", 20, 20);
-  doc.text(content, 20, 40);
+  db.collection("settings").doc("restaurant").get().then(docSnap => {
 
-  doc.save("Restaurant_Report.pdf");
+    let restaurantName = "MY RESTAURANT";
+
+    if (docSnap.exists) {
+      restaurantName = docSnap.data().name;
+    }
+
+    // Watermark
+    doc.setFontSize(50);
+    doc.setTextColor(200, 200, 200);
+    doc.text(restaurantName, 105, 140, {
+      align: "center",
+      angle: 45
+    });
+
+    // Normal text
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16);
+    doc.text(restaurantName, 20, 20);
+
+    doc.setFontSize(12);
+    doc.text(content, 20, 40);
+
+    doc.save("Restaurant_Report.pdf");
+  });
+
 }
 
+// ================= RESTAURANT NAME SETTINGS =================
+
+function saveRestaurantName() {
+
+  const name = document.getElementById("restaurantName").value.trim();
+
+  if (!name) {
+    alert("Enter restaurant name");
+    return;
+  }
+
+  db.collection("settings").doc("restaurant").set({
+    name: name
+  }).then(() => {
+    document.getElementById("nameStatus").innerText = "Name Saved ✅";
+  });
+
+}
+
+function loadRestaurantName() {
+
+  db.collection("settings").doc("restaurant").get()
+    .then(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        document.getElementById("restaurantName").value = data.name;
+      }
+    });
+}
 
 // ================= QR ATTENDANCE =================
 
