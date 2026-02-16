@@ -77,3 +77,89 @@ async function loadStock() {
     stockList.innerHTML += `<li>${data.item} - ${data.quantity}</li>`;
   });
 }
+// ================= QR ATTENDANCE =================
+
+let html5QrCode;
+
+window.startScanner = function () {
+  const readerElement = document.getElementById("reader");
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  Html5Qrcode.getCameras().then(devices => {
+    if (devices && devices.length) {
+      const cameraId = devices[0].id;
+
+      html5QrCode.start(
+        cameraId,
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+          processAttendance(qrCodeMessage);
+        },
+        errorMessage => {
+          // ignore scan errors
+        }
+      );
+    }
+  }).catch(err => {
+    alert("Camera error: " + err);
+  });
+};
+
+window.stopScanner = function () {
+  if (html5QrCode) {
+    html5QrCode.stop();
+  }
+};
+
+async function processAttendance(qrData) {
+  try {
+
+    const data = JSON.parse(qrData);
+    const staffId = data.staffId;
+    const name = data.name;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    const monthDocId = `${year}-${month}`;
+
+    const attendanceRef = db.collection("attendance")
+      .doc(monthDocId)
+      .collection("staff")
+      .doc(staffId);
+
+    const docSnap = await attendanceRef.get();
+
+    let todayData = {};
+
+    if (docSnap.exists) {
+      todayData = docSnap.data()[day] || {};
+    }
+
+    if (!todayData.checkIn) {
+      todayData.checkIn = now.toLocaleTimeString();
+      document.getElementById("attendanceStatus").innerText =
+        name + " Checked In at " + todayData.checkIn;
+
+    } else if (!todayData.checkOut) {
+      todayData.checkOut = now.toLocaleTimeString();
+      document.getElementById("attendanceStatus").innerText =
+        name + " Checked Out at " + todayData.checkOut;
+
+    } else {
+      document.getElementById("attendanceStatus").innerText =
+        "Attendance already completed for today.";
+      return;
+    }
+
+    await attendanceRef.set({
+      [day]: todayData
+    }, { merge: true });
+
+  } catch (err) {
+    alert("Invalid QR code");
+  }
+}
