@@ -1,5 +1,4 @@
-// ================= FIREBASE CONFIG =================
-
+// 🔥 FIREBASE CONFIG
 var firebaseConfig = {
   apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
   authDomain: "my-restaurant-7badd.firebaseapp.com",
@@ -10,10 +9,10 @@ var firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 var db = firebase.firestore();
 var auth = firebase.auth();
 
+let currentUserRole = "";
 
 // ================= LOGIN =================
 
@@ -23,12 +22,28 @@ function login() {
   const password = document.getElementById("password").value;
 
   auth.signInWithEmailAndPassword(email, password)
-    .then(() => {
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
-  loadStock();
-  loadRestaurantName();
-})
+    .then((userCredential) => {
+
+      const userEmail = userCredential.user.email;
+
+      db.collection("users").doc(userEmail).get().then(doc => {
+
+        if (doc.exists) {
+          currentUserRole = doc.data().role;
+        } else {
+          currentUserRole = "staff"; // default
+        }
+
+        document.getElementById("userRole").innerText = currentUserRole;
+
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+
+        applyRolePermissions();
+        loadStock();
+      });
+
+    })
     .catch(error => {
       document.getElementById("message").innerText = error.message;
     });
@@ -39,44 +54,45 @@ function logout() {
   location.reload();
 }
 
+// ================= ROLE CONTROL =================
 
-// ================= PROFESSIONAL STOCK + SALES =================
+function applyRolePermissions() {
+
+  if (currentUserRole === "owner") {
+    // Full access
+  }
+
+  if (currentUserRole === "chef") {
+    document.getElementById("reportSection").style.display = "none";
+  }
+
+  if (currentUserRole === "staff") {
+    document.getElementById("stockSection").style.display = "none";
+    document.getElementById("reportSection").style.display = "none";
+  }
+}
+
+// ================= STOCK + SALES =================
 
 function addItem() {
 
   const name = document.getElementById("itemName").value.trim();
   const type = document.getElementById("itemType").value;
   const cost = parseFloat(document.getElementById("costPrice").value) || 0;
-  const selling = parseFloat(document.getElementById("sellingPrice").value) || 0;
+  const sell = parseFloat(document.getElementById("sellingPrice").value) || 0;
   const qty = parseInt(document.getElementById("itemQty").value) || 0;
 
-  if (!name || qty <= 0) {
-    alert("Enter valid item name and quantity");
-    return;
-  }
+  if (!name || qty <= 0) return alert("Enter valid details");
 
-  const itemsRef = db.collection("items").where("name", "==", name);
+  const ref = db.collection("items").where("name", "==", name);
 
-  itemsRef.get().then(snapshot => {
+  ref.get().then(snapshot => {
 
-    if (snapshot.empty) {
+    if (snapshot.empty && type === "raw") {
 
-      if (type === "sale") {
-        alert("Item does not exist in stock ❌");
-        return;
-      }
-
-      // New raw item
       db.collection("items").add({
-        name: name,
-        type: "raw",
-        costPrice: cost,
-        sellingPrice: selling,
-        quantity: qty,
-        createdAt: new Date()
-      }).then(() => {
-        alert("New Raw Item Added ✅");
-        loadStock();
+        name, costPrice: cost, sellingPrice: sell,
+        quantity: qty
       });
 
     } else {
@@ -84,85 +100,49 @@ function addItem() {
       snapshot.forEach(doc => {
 
         const data = doc.data();
-        const existingQty = data.quantity;
+        let newQty = data.quantity;
 
         if (type === "raw") {
-
-          // Increase stock
-          const newQty = existingQty + qty;
-
-          db.collection("items").doc(doc.id).update({
-            quantity: newQty
-          }).then(() => {
-            alert("Stock Increased ✅");
-            loadStock();
-          });
-
+          newQty += qty;
         } else {
+          if (data.quantity < qty) return alert("Not enough stock");
+          newQty -= qty;
 
-          // SALE LOGIC
-          if (existingQty < qty) {
-            alert("Not enough stock ❌");
-            return;
-          }
-
-          const newQty = existingQty - qty;
-
-          // Deduct stock
-          db.collection("items").doc(doc.id).update({
-            quantity: newQty
-          });
-
-          // Save sale record
           db.collection("sales").add({
-            name: name,
+            name,
             quantity: qty,
-            sellingPrice: data.sellingPrice,
             total: data.sellingPrice * qty,
             date: new Date()
-          }).then(() => {
-            alert("Sale Recorded ✅");
-            loadStock();
           });
-
         }
+
+        db.collection("items").doc(doc.id).update({
+          quantity: newQty
+        });
 
       });
 
     }
 
+    loadStock();
   });
-
-  document.getElementById("itemName").value = "";
-  document.getElementById("costPrice").value = "";
-  document.getElementById("sellingPrice").value = "";
-  document.getElementById("itemQty").value = "";
 }
 
 // ================= LOAD STOCK =================
 
 function loadStock() {
 
-  db.collection("items").get()
-  .then(snapshot => {
+  db.collection("items").get().then(snapshot => {
 
     let html = "";
 
-    if (snapshot.empty) {
-      html = "<p>No stock available</p>";
-    }
-
     snapshot.forEach(doc => {
-
-      const data = doc.data();
+      const d = doc.data();
 
       html += `
         <div class="card">
-          <strong>${data.name}</strong><br>
-          Type: ${data.type}<br>
-          Quantity: ${data.quantity}<br>
-          Cost: ₹${data.costPrice}<br>
-          Selling: ₹${data.sellingPrice}
+          <strong>${d.name}</strong><br>
+          Quantity: ${d.quantity}
         </div>
       `;
     });
@@ -171,8 +151,7 @@ function loadStock() {
   });
 }
 
-
-// ================= PROFESSIONAL DAILY REPORT =================
+// ================= DAILY REPORT =================
 
 function generateReport() {
 
@@ -184,26 +163,21 @@ function generateReport() {
     let revenue = 0;
 
     snapshot.forEach(doc => {
-
       const data = doc.data();
-      const saleDate = data.date.toDate();
-      saleDate.setHours(0,0,0,0);
+      const d = data.date.toDate();
+      d.setHours(0,0,0,0);
 
-      if (saleDate.getTime() === today.getTime()) {
+      if (d.getTime() === today.getTime()) {
         revenue += data.total;
       }
-
     });
 
-    document.getElementById("report").innerHTML = `
-      <h4>Today's Sales</h4>
-      <p>Total Revenue: ₹${revenue}</p>
-    `;
+    document.getElementById("report").innerHTML =
+      "<h4>Total Revenue Today: ₹" + revenue + "</h4>";
   });
 }
 
-
-// ================= EXPORT PDF =================
+// ================= PDF =================
 
 function exportPDF() {
 
@@ -212,66 +186,17 @@ function exportPDF() {
 
   const content = document.getElementById("report").innerText;
 
-  db.collection("settings").doc("restaurant").get().then(docSnap => {
+  doc.setFontSize(40);
+  doc.setTextColor(220);
+  doc.text("MY RESTAURANT", 105, 140, { align: "center", angle: 45 });
 
-    let restaurantName = "MY RESTAURANT";
+  doc.setTextColor(0);
+  doc.text(content, 20, 20);
 
-    if (docSnap.exists) {
-      restaurantName = docSnap.data().name;
-    }
-
-    // Watermark
-    doc.setFontSize(50);
-    doc.setTextColor(200, 200, 200);
-    doc.text(restaurantName, 105, 140, {
-      align: "center",
-      angle: 45
-    });
-
-    // Normal text
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(16);
-    doc.text(restaurantName, 20, 20);
-
-    doc.setFontSize(12);
-    doc.text(content, 20, 40);
-
-    doc.save("Restaurant_Report.pdf");
-  });
-
+  doc.save("Report.pdf");
 }
 
-// ================= RESTAURANT NAME SETTINGS =================
-
-function saveRestaurantName() {
-
-  const name = document.getElementById("restaurantName").value.trim();
-
-  if (!name) {
-    alert("Enter restaurant name");
-    return;
-  }
-
-  db.collection("settings").doc("restaurant").set({
-    name: name
-  }).then(() => {
-    document.getElementById("nameStatus").innerText = "Name Saved ✅";
-  });
-
-}
-
-function loadRestaurantName() {
-
-  db.collection("settings").doc("restaurant").get()
-    .then(doc => {
-      if (doc.exists) {
-        const data = doc.data();
-        document.getElementById("restaurantName").value = data.name;
-      }
-    });
-}
-
-// ================= QR ATTENDANCE =================
+// ================= QR =================
 
 let scanner;
 
@@ -280,22 +205,20 @@ function startScanner() {
   scanner = new Html5Qrcode("reader");
 
   scanner.start(
-    { facingMode: "environment" }, // back camera
+    { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    (decodedText) => {
+    text => {
 
       db.collection("attendance").add({
-        staffId: decodedText,
+        staff: text,
         time: new Date()
       });
 
-      alert("Attendance Marked for " + decodedText);
+      alert("Attendance marked");
     }
   );
 }
 
 function stopScanner() {
-  if (scanner) {
-    scanner.stop();
-  }
+  if (scanner) scanner.stop();
 }
