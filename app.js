@@ -1,16 +1,16 @@
-// Firebase imports
+// Firebase Imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-// 🔴 REPLACE WITH YOUR REAL FIREBASE CONFIG
+// 🔴 PASTE YOUR REAL FIREBASE CONFIG HERE
 const firebaseConfig = {
   apiKey: "AIzaSyCQBOmA3OktohJKYCzbJxEORsshtsh-Zno",
   authDomain: "my-restaurant-7badd.firebaseapp.com",
   projectId: "my-restaurant-7badd",
   storageBucket: "my-restaurant-7badd.appspot.com",
   messagingSenderId: "588063103672",
-  appId: "YOUR_APP_ID"
+  appId: "1:588063103672:web:ace926af186843cb56724d"
 };
 
 // Initialize Firebase
@@ -18,37 +18,30 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ================= LOGIN =================
+// LOGIN
 window.login = async function () {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  if (!email || !password) {
-    alert("Enter email and password");
-    return;
-  }
-
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    alert("Login Successful");
 
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
 
     loadStock();
-
   } catch (error) {
     alert(error.message);
   }
 };
 
-// ================= LOGOUT =================
+// LOGOUT
 window.logout = async function () {
   await signOut(auth);
   location.reload();
 };
 
-// ================= ADD STOCK =================
+// ADD STOCK
 window.addStock = async function () {
   const item = document.getElementById("itemName").value;
   const qty = document.getElementById("itemQty").value;
@@ -58,33 +51,26 @@ window.addStock = async function () {
     return;
   }
 
-  try {
-    await addDoc(collection(db, "stock"), {
-      item: item,
-      quantity: Number(qty),
-      createdAt: new Date()
-    });
+  await addDoc(collection(db, "stock"), {
+    item: item,
+    quantity: Number(qty),
+    createdAt: new Date()
+  });
 
-    alert("Stock Added");
+  document.getElementById("itemName").value = "";
+  document.getElementById("itemQty").value = "";
 
-    document.getElementById("itemName").value = "";
-    document.getElementById("itemQty").value = "";
-
-    loadStock();
-
-  } catch (error) {
-    alert(error.message);
-  }
+  loadStock();
 };
 
-// ================= LOAD STOCK =================
+// LOAD STOCK
 async function loadStock() {
   const stockList = document.getElementById("stockList");
   stockList.innerHTML = "";
 
   const snapshot = await getDocs(collection(db, "stock"));
 
-  snapshot.forEach((doc) => {
+  snapshot.forEach(doc => {
     const data = doc.data();
     stockList.innerHTML += `<li>${data.item} - ${data.quantity}</li>`;
   });
