@@ -269,3 +269,103 @@ async function downloadFullReport() {
 
   doc.save("business_report.pdf");
     }
+
+// ================= PROFIT REPORT ENGINE =================
+
+document.getElementById("profitType").addEventListener("change", function () {
+
+  if (this.value === "monthly") {
+    profitMonth.style.display = "block";
+    profitYear.style.display = "none";
+  } else {
+    profitMonth.style.display = "none";
+    profitYear.style.display = "block";
+  }
+
+});
+
+function loadProfitReport() {
+
+  const type = profitType.value;
+  let prefix = "";
+
+  if (type === "monthly") {
+    if (!profitMonth.value) return alert("Select month");
+    prefix = profitMonth.value;
+  }
+
+  if (type === "yearly") {
+    if (!profitYear.value) return alert("Enter year");
+    prefix = profitYear.value;
+  }
+
+  calculateProfitPeriod(prefix);
+}
+
+function calculateProfitPeriod(prefix) {
+
+  let totalRevenue = 0;
+  let totalExpense = 0;
+  let totalSalary = 0;
+
+  // REVENUE
+  db.collection("sales").get().then(salesSnap => {
+
+    salesSnap.forEach(doc => {
+      const d = doc.data();
+      const saleDate = d.date?.toDate().toISOString().split("T")[0];
+
+      if (saleDate.startsWith(prefix)) {
+        totalRevenue += d.total;
+      }
+    });
+
+    // EXPENSE
+    db.collection("expenses").get().then(expSnap => {
+
+      expSnap.forEach(doc => {
+        const d = doc.data();
+        if (d.date.startsWith(prefix)) {
+          totalExpense += d.amount;
+        }
+      });
+
+      // SALARY
+      db.collection("attendance").get().then(attSnap => {
+
+        let staffDays = {};
+
+        attSnap.forEach(doc => {
+
+          const d = doc.data();
+
+          if (d.date.startsWith(prefix) && d.salaryEligible) {
+
+            if (!staffDays[d.staffId]) staffDays[d.staffId] = 0;
+            staffDays[d.staffId]++;
+          }
+        });
+
+        db.collection("staff").get().then(staffSnap => {
+
+          staffSnap.forEach(staffDoc => {
+
+            const id = staffDoc.id;
+            const wage = staffDoc.data().dailyWage;
+            const days = staffDays[id] || 0;
+
+            totalSalary += days * wage;
+          });
+
+          const profit = totalRevenue - totalExpense - totalSalary;
+
+          profitReport.innerHTML =
+            `Revenue: ₹ ${totalRevenue}<br>
+             Expense: ₹ ${totalExpense}<br>
+             Salary: ₹ ${totalSalary}<br>
+             <b>Net Profit: ₹ ${profit}</b>`;
+        });
+      });
+    });
+  });
+}
