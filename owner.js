@@ -11,21 +11,18 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 var db = firebase.firestore();
 
-// ================= PIN SYSTEM =================
+// ================= PIN =================
 
 function unlock() {
 
-  const enteredPin = document.getElementById("pinInput").value;
+  const pin = document.getElementById("pinInput").value;
 
   db.collection("settings").doc("ownerConfig").get()
     .then(doc => {
 
-      // First time setup
       if (!doc.exists) {
-        if (enteredPin === "1234") {
-          db.collection("settings").doc("ownerConfig").set({
-            pin: "1234"
-          });
+        if (pin === "1234") {
+          db.collection("settings").doc("ownerConfig").set({ pin: "1234" });
           openDashboard();
         } else {
           alert("Default PIN is 1234");
@@ -33,9 +30,7 @@ function unlock() {
         return;
       }
 
-      const savedPin = doc.data().pin;
-
-      if (enteredPin === savedPin) {
+      if (pin === doc.data().pin) {
         openDashboard();
       } else {
         alert("Wrong PIN");
@@ -45,9 +40,8 @@ function unlock() {
 }
 
 function openDashboard() {
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
-
+  lockScreen.style.display = "none";
+  dashboard.style.display = "block";
   loadStaff();
   loadRestaurantStatus();
   loadRevenue();
@@ -56,67 +50,48 @@ function openDashboard() {
 // ================= RESTAURANT STATUS =================
 
 function openRestaurant() {
-
   const today = new Date().toISOString().split("T")[0];
-
   db.collection("restaurantStatus").doc(today).set({
-    date: today,
     openTime: new Date(),
     status: "open"
   }, { merge: true });
-
   loadRestaurantStatus();
 }
 
 function closeRestaurant() {
-
   const today = new Date().toISOString().split("T")[0];
-
   db.collection("restaurantStatus").doc(today).set({
     closeTime: new Date(),
     status: "closed"
   }, { merge: true });
-
   loadRestaurantStatus();
 }
 
 function loadRestaurantStatus() {
-
   const today = new Date().toISOString().split("T")[0];
-
   db.collection("restaurantStatus").doc(today).get()
     .then(doc => {
-
-      if (!doc.exists) {
-        document.getElementById("statusInfo").innerHTML = "No status set today.";
-        return;
-      }
-
-      const data = doc.data();
-
-      document.getElementById("statusInfo").innerHTML = `
-        Status: ${data.status || "-"} <br>
-        Open Time: ${data.openTime ? data.openTime.toDate().toLocaleTimeString() : "-"} <br>
-        Close Time: ${data.closeTime ? data.closeTime.toDate().toLocaleTimeString() : "-"}
+      if (!doc.exists) return;
+      const d = doc.data();
+      statusInfo.innerHTML = `
+        Status: ${d.status || "-"} <br>
+        Open: ${d.openTime ? d.openTime.toDate().toLocaleTimeString() : "-"} <br>
+        Close: ${d.closeTime ? d.closeTime.toDate().toLocaleTimeString() : "-"}
       `;
     });
 }
 
-// ================= STAFF MANAGEMENT =================
+// ================= STAFF =================
 
 function generateStaffId() {
   return "STF" + Math.floor(1000 + Math.random() * 9000);
 }
 
 function addStaff() {
+  const name = staffName.value;
+  const wage = parseFloat(staffWage.value);
 
-  const name = document.getElementById("staffName").value;
-  const wage = parseFloat(document.getElementById("staffWage").value);
-
-  if (!name || !wage) {
-    alert("Enter all details");
-    return;
-  }
+  if (!name || !wage) return alert("Enter details");
 
   const id = generateStaffId();
 
@@ -124,42 +99,138 @@ function addStaff() {
     name: name,
     dailyWage: wage
   }).then(() => {
-
-    document.getElementById("staffName").value = "";
-    document.getElementById("staffWage").value = "";
-
+    staffName.value = "";
+    staffWage.value = "";
     loadStaff();
   });
 }
 
 function loadStaff() {
-
   db.collection("staff").get().then(snapshot => {
 
     let html = "";
 
     snapshot.forEach(doc => {
-
       const data = doc.data();
-
       html += `
-        <div style="margin-bottom:15px;">
+        <div>
           <strong>${doc.id}</strong> - ${data.name} (₹${data.dailyWage})
           <div id="qr-${doc.id}"></div>
         </div>
       `;
     });
 
-    document.getElementById("staffList").innerHTML = html;
+    staffList.innerHTML = html;
 
     snapshot.forEach(doc => {
       new QRCode(document.getElementById("qr-" + doc.id), doc.id);
     });
-
   });
 }
 
-// ================= REVENUE SUMMARY =================
+// ================= ATTENDANCE REPORT =================
+
+document.getElementById("reportType").addEventListener("change", function () {
+
+  monthPicker.style.display =
+    this.value === "monthly" ? "block" : "none";
+
+  yearPicker.style.display =
+    this.value === "yearly" ? "block" : "none";
+});
+
+function loadReport() {
+
+  const type = reportType.value;
+
+  if (type === "daily") loadDaily();
+  if (type === "monthly") loadMonthly();
+  if (type === "yearly") loadYearly();
+}
+
+function loadDaily() {
+
+  const today = new Date().toISOString().split("T")[0];
+
+  db.collection("attendance").where("date", "==", today).get()
+    .then(snapshot => {
+
+      let html = "";
+      let totalSalary = 0;
+
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        html += `
+          ${d.staffId} — ${d.totalHours?.toFixed(2) || 0} hrs —
+          ${d.salaryEligible ? "Eligible" : "Not Eligible"} <br>
+        `;
+        if (d.salaryEligible) totalSalary++;
+      });
+
+      attendanceReport.innerHTML = html;
+      salarySummary.innerHTML = "Today Eligible Staff: " + totalSalary;
+    });
+}
+
+function loadMonthly() {
+
+  const monthValue = monthPicker.value;
+  if (!monthValue) return alert("Select month");
+
+  const [year, month] = monthValue.split("-");
+  calculatePeriod(year + "-" + month);
+}
+
+function loadYearly() {
+
+  const year = yearPicker.value;
+  if (!year) return alert("Enter year");
+
+  calculatePeriod(year);
+}
+
+function calculatePeriod(prefix) {
+
+  db.collection("attendance").get().then(snapshot => {
+
+    let staffData = {};
+
+    snapshot.forEach(doc => {
+
+      const d = doc.data();
+
+      if (d.date.startsWith(prefix) && d.salaryEligible) {
+
+        if (!staffData[d.staffId]) staffData[d.staffId] = 0;
+        staffData[d.staffId]++;
+      }
+    });
+
+    db.collection("staff").get().then(staffSnap => {
+
+      let html = "";
+      let totalSalary = 0;
+
+      staffSnap.forEach(staffDoc => {
+
+        const id = staffDoc.id;
+        const wage = staffDoc.data().dailyWage;
+
+        const days = staffData[id] || 0;
+        const salary = days * wage;
+
+        totalSalary += salary;
+
+        html += `${id} — Days: ${days} — Salary: ₹ ${salary} <br>`;
+      });
+
+      attendanceReport.innerHTML = html;
+      salarySummary.innerHTML = "Total Salary: ₹ " + totalSalary;
+    });
+  });
+}
+
+// ================= REVENUE =================
 
 function loadRevenue() {
 
@@ -169,222 +240,59 @@ function loadRevenue() {
   db.collection("sales").get().then(snapshot => {
 
     snapshot.forEach(doc => {
-
-      const data = doc.data();
-      const saleDate = data.date?.toDate().toISOString().split("T")[0];
-
-      if (saleDate === today) {
-        total += data.total;
-      }
+      const d = doc.data();
+      const saleDate = d.date?.toDate().toISOString().split("T")[0];
+      if (saleDate === today) total += d.total;
     });
 
-    document.getElementById("revenueSummary").innerHTML =
-      "Today Revenue: ₹ " + total.toFixed(2);
+    revenueSummary.innerHTML = "Today Revenue: ₹ " + total.toFixed(2);
   });
 }
 
-// ================= REPORT TYPE UI CONTROL =================
+// ================= DAILY CLOSING =================
 
-document.getElementById("reportType").addEventListener("change", function () {
-
-  const type = this.value;
-
-  document.getElementById("monthPicker").style.display =
-    type === "monthly" ? "block" : "none";
-
-  document.getElementById("yearPicker").style.display =
-    type === "yearly" ? "block" : "none";
-});
-
-// ================= LOAD REPORT =================
-
-function loadReport() {
-
-  const type = document.getElementById("reportType").value;
-
-  if (type === "daily") {
-    loadDailyReport();
-  }
-
-  if (type === "monthly") {
-    loadMonthlyReport();
-  }
-
-  if (type === "yearly") {
-    loadYearlyReport();
-  }
-}
-
-// ================= DAILY REPORT =================
-
-function loadDailyReport() {
+function saveClosing() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  db.collection("attendance")
-    .where("date", "==", today)
-    .get()
-    .then(snapshot => {
+  const cash = parseFloat(cashInput.value) || 0;
+  const online = parseFloat(onlineInput.value) || 0;
 
-      let html = "";
-      let totalSalary = 0;
+  const total = cash + online;
 
-      snapshot.forEach(doc => {
+  db.collection("dailyClosing").doc(today).set({
+    cash, online, total
+  });
 
-        const data = doc.data();
-
-        html += `
-          <div>
-            ${data.staffId} —
-            ${data.totalHours?.toFixed(2) || 0} hrs —
-            ${data.salaryEligible ? "Eligible" : "Not Eligible"}
-          </div>
-        `;
-
-        if (data.salaryEligible) {
-          totalSalary++;
-        }
-      });
-
-      document.getElementById("attendanceReport").innerHTML = html;
-      document.getElementById("salarySummary").innerHTML =
-        "Today Eligible Staff Count: " + totalSalary;
-    });
+  closingSummary.innerHTML =
+    `Total: ₹ ${total} <br> Cash: ₹ ${cash} <br> Online: ₹ ${online}`;
 }
 
-// ================= MONTHLY REPORT =================
+// ================= FULL REPORT PDF =================
 
-function loadMonthlyReport() {
+async function downloadFullReport() {
 
-  const monthValue = document.getElementById("monthPicker").value;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-  if (!monthValue) {
-    alert("Select month first");
-    return;
-  }
+  let y = 10;
 
-  const [year, month] = monthValue.split("-");
+  doc.text("Restaurant Business Report", 10, y);
+  y += 10;
 
-  db.collection("attendance").get().then(snapshot => {
+  const sections = [
+    attendanceReport.innerText,
+    salarySummary.innerText,
+    revenueSummary.innerText,
+    closingSummary.innerText
+  ];
 
-    let staffData = {};
-
-    snapshot.forEach(doc => {
-
-      const data = doc.data();
-      const date = data.date;
-
-      if (date.startsWith(year + "-" + month)) {
-
-        if (!staffData[data.staffId]) {
-          staffData[data.staffId] = {
-            daysWorked: 0
-          };
-        }
-
-        if (data.salaryEligible) {
-          staffData[data.staffId].daysWorked++;
-        }
-      }
-    });
-
-    generateMonthlyHTML(staffData);
+  sections.forEach(text => {
+    if (!text) return;
+    const lines = doc.splitTextToSize(text, 180);
+    doc.text(lines, 10, y);
+    y += lines.length * 6 + 5;
   });
-}
 
-function generateMonthlyHTML(staffData) {
-
-  let html = "";
-  let totalSalary = 0;
-
-  db.collection("staff").get().then(staffSnapshot => {
-
-    staffSnapshot.forEach(staffDoc => {
-
-      const id = staffDoc.id;
-      const wage = staffDoc.data().dailyWage;
-
-      const days = staffData[id]?.daysWorked || 0;
-      const salary = days * wage;
-
-      totalSalary += salary;
-
-      html += `
-        <div>
-          ${id} — Days: ${days} — Salary: ₹ ${salary}
-        </div>
-      `;
-    });
-
-    document.getElementById("attendanceReport").innerHTML = html;
-    document.getElementById("salarySummary").innerHTML =
-      "Monthly Salary Total: ₹ " + totalSalary;
-  });
-}
-
-// ================= YEARLY REPORT =================
-
-function loadYearlyReport() {
-
-  const year = document.getElementById("yearPicker").value;
-
-  if (!year) {
-    alert("Enter year first");
-    return;
-  }
-
-  db.collection("attendance").get().then(snapshot => {
-
-    let staffData = {};
-
-    snapshot.forEach(doc => {
-
-      const data = doc.data();
-
-      if (data.date.startsWith(year)) {
-
-        if (!staffData[data.staffId]) {
-          staffData[data.staffId] = {
-            daysWorked: 0
-          };
-        }
-
-        if (data.salaryEligible) {
-          staffData[data.staffId].daysWorked++;
-        }
-      }
-    });
-
-    generateYearlyHTML(staffData);
-  });
-}
-
-function generateYearlyHTML(staffData) {
-
-  let html = "";
-  let totalSalary = 0;
-
-  db.collection("staff").get().then(staffSnapshot => {
-
-    staffSnapshot.forEach(staffDoc => {
-
-      const id = staffDoc.id;
-      const wage = staffDoc.data().dailyWage;
-
-      const days = staffData[id]?.daysWorked || 0;
-      const salary = days * wage;
-
-      totalSalary += salary;
-
-      html += `
-        <div>
-          ${id} — Days: ${days} — Salary: ₹ ${salary}
-        </div>
-      `;
-    });
-
-    document.getElementById("attendanceReport").innerHTML = html;
-    document.getElementById("salarySummary").innerHTML =
-      "Yearly Salary Total: ₹ " + totalSalary;
-  });
+  doc.save("business_report.pdf");
 }
