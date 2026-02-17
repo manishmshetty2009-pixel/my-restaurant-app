@@ -182,3 +182,209 @@ function loadRevenue() {
       "Today Revenue: ₹ " + total.toFixed(2);
   });
 }
+
+// ================= REPORT TYPE UI CONTROL =================
+
+document.getElementById("reportType").addEventListener("change", function () {
+
+  const type = this.value;
+
+  document.getElementById("monthPicker").style.display =
+    type === "monthly" ? "block" : "none";
+
+  document.getElementById("yearPicker").style.display =
+    type === "yearly" ? "block" : "none";
+});
+
+// ================= LOAD REPORT =================
+
+function loadReport() {
+
+  const type = document.getElementById("reportType").value;
+
+  if (type === "daily") {
+    loadDailyReport();
+  }
+
+  if (type === "monthly") {
+    loadMonthlyReport();
+  }
+
+  if (type === "yearly") {
+    loadYearlyReport();
+  }
+}
+
+// ================= DAILY REPORT =================
+
+function loadDailyReport() {
+
+  const today = new Date().toISOString().split("T")[0];
+
+  db.collection("attendance")
+    .where("date", "==", today)
+    .get()
+    .then(snapshot => {
+
+      let html = "";
+      let totalSalary = 0;
+
+      snapshot.forEach(doc => {
+
+        const data = doc.data();
+
+        html += `
+          <div>
+            ${data.staffId} —
+            ${data.totalHours?.toFixed(2) || 0} hrs —
+            ${data.salaryEligible ? "Eligible" : "Not Eligible"}
+          </div>
+        `;
+
+        if (data.salaryEligible) {
+          totalSalary++;
+        }
+      });
+
+      document.getElementById("attendanceReport").innerHTML = html;
+      document.getElementById("salarySummary").innerHTML =
+        "Today Eligible Staff Count: " + totalSalary;
+    });
+}
+
+// ================= MONTHLY REPORT =================
+
+function loadMonthlyReport() {
+
+  const monthValue = document.getElementById("monthPicker").value;
+
+  if (!monthValue) {
+    alert("Select month first");
+    return;
+  }
+
+  const [year, month] = monthValue.split("-");
+
+  db.collection("attendance").get().then(snapshot => {
+
+    let staffData = {};
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+      const date = data.date;
+
+      if (date.startsWith(year + "-" + month)) {
+
+        if (!staffData[data.staffId]) {
+          staffData[data.staffId] = {
+            daysWorked: 0
+          };
+        }
+
+        if (data.salaryEligible) {
+          staffData[data.staffId].daysWorked++;
+        }
+      }
+    });
+
+    generateMonthlyHTML(staffData);
+  });
+}
+
+function generateMonthlyHTML(staffData) {
+
+  let html = "";
+  let totalSalary = 0;
+
+  db.collection("staff").get().then(staffSnapshot => {
+
+    staffSnapshot.forEach(staffDoc => {
+
+      const id = staffDoc.id;
+      const wage = staffDoc.data().dailyWage;
+
+      const days = staffData[id]?.daysWorked || 0;
+      const salary = days * wage;
+
+      totalSalary += salary;
+
+      html += `
+        <div>
+          ${id} — Days: ${days} — Salary: ₹ ${salary}
+        </div>
+      `;
+    });
+
+    document.getElementById("attendanceReport").innerHTML = html;
+    document.getElementById("salarySummary").innerHTML =
+      "Monthly Salary Total: ₹ " + totalSalary;
+  });
+}
+
+// ================= YEARLY REPORT =================
+
+function loadYearlyReport() {
+
+  const year = document.getElementById("yearPicker").value;
+
+  if (!year) {
+    alert("Enter year first");
+    return;
+  }
+
+  db.collection("attendance").get().then(snapshot => {
+
+    let staffData = {};
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+
+      if (data.date.startsWith(year)) {
+
+        if (!staffData[data.staffId]) {
+          staffData[data.staffId] = {
+            daysWorked: 0
+          };
+        }
+
+        if (data.salaryEligible) {
+          staffData[data.staffId].daysWorked++;
+        }
+      }
+    });
+
+    generateYearlyHTML(staffData);
+  });
+}
+
+function generateYearlyHTML(staffData) {
+
+  let html = "";
+  let totalSalary = 0;
+
+  db.collection("staff").get().then(staffSnapshot => {
+
+    staffSnapshot.forEach(staffDoc => {
+
+      const id = staffDoc.id;
+      const wage = staffDoc.data().dailyWage;
+
+      const days = staffData[id]?.daysWorked || 0;
+      const salary = days * wage;
+
+      totalSalary += salary;
+
+      html += `
+        <div>
+          ${id} — Days: ${days} — Salary: ₹ ${salary}
+        </div>
+      `;
+    });
+
+    document.getElementById("attendanceReport").innerHTML = html;
+    document.getElementById("salarySummary").innerHTML =
+      "Yearly Salary Total: ₹ " + totalSalary;
+  });
+}
