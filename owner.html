@@ -9,26 +9,31 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body { font-family: Arial; padding:20px; }
 input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; }
 .section { border:1px solid #ccc; padding:15px; margin:15px 0; border-radius:8px; }
+canvas { margin-top:15px; }
 </style>
 </head>
 
 <body>
 
+<!-- 🔐 PIN LOCK -->
 <div id="lockScreen">
   <h2>Owner Access</h2>
   <input type="password" id="pinInput" placeholder="Enter PIN">
   <button onclick="unlock()">Unlock</button>
 </div>
 
+<!-- 👑 DASHBOARD -->
 <div id="dashboard" style="display:none;">
 
 <h2>Owner Master Dashboard</h2>
 
+<!-- 🟢 RESTAURANT STATUS -->
 <div class="section">
 <h3>Restaurant Status</h3>
 <button onclick="openRestaurant()">Open</button>
@@ -36,6 +41,7 @@ input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; 
 <div id="statusInfo"></div>
 </div>
 
+<!-- 👨‍🍳 STAFF -->
 <div class="section">
 <h3>Staff</h3>
 <input type="text" id="staffName" placeholder="Staff Name">
@@ -44,8 +50,10 @@ input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; 
 <div id="staffList"></div>
 </div>
 
+<!-- 🕒 ATTENDANCE -->
 <div class="section">
 <h3>Attendance Report</h3>
+
 <select id="reportType" onchange="loadReport()">
 <option value="daily">Daily</option>
 <option value="monthly">Monthly</option>
@@ -60,16 +68,19 @@ input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; 
 <div id="attendanceReport"></div>
 </div>
 
+<!-- 💰 SALARY -->
 <div class="section">
 <h3>Salary Summary</h3>
 <div id="salarySummary"></div>
 </div>
 
+<!-- 📊 REVENUE -->
 <div class="section">
-<h3>Revenue</h3>
+<h3>Revenue (Today)</h3>
 <div id="revenueSummary"></div>
 </div>
 
+<!-- 🧾 EXPENSE -->
 <div class="section">
 <h3>Expense</h3>
 <input type="number" id="expenseAmount" placeholder="Amount">
@@ -78,17 +89,19 @@ input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; 
 <div id="expenseSummary"></div>
 </div>
 
+<!-- 💵 PROFIT TODAY -->
 <div class="section">
 <h3>Profit (Today)</h3>
 <div id="profitSummary"></div>
 </div>
 
+<!-- 📆 PROFIT REPORT -->
 <div class="section">
 <h3>Profit Report (Monthly / Yearly)</h3>
 
 <select id="profitType">
-  <option value="monthly">Monthly</option>
-  <option value="yearly">Yearly</option>
+<option value="monthly">Monthly</option>
+<option value="yearly">Yearly</option>
 </select>
 
 <input type="month" id="profitMonth">
@@ -98,15 +111,19 @@ input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; 
 
 <div id="profitReport"></div>
 </div>
-  
+
+<!-- 📈 ANALYTICS DASHBOARD -->
 <div class="section">
-<h3>Daily Closing</h3>
-<input type="number" id="cashInput" placeholder="Cash">
-<input type="number" id="onlineInput" placeholder="Online">
-<button onclick="saveClosing()">Save</button>
-<div id="closingSummary"></div>
+<h3>Business Analytics Dashboard</h3>
+
+<button onclick="loadMonthlyCharts()">Load Monthly Charts</button>
+
+<canvas id="revenueChart"></canvas>
+<canvas id="expenseChart"></canvas>
+<canvas id="profitChart"></canvas>
 </div>
 
+<!-- 📄 DOWNLOAD -->
 <div class="section">
 <button onclick="downloadFullReport()">Download Full Business Report</button>
 </div>
