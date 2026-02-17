@@ -8,38 +8,34 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body { font-family: Arial; padding:20px; }
 input, select, button { padding:8px; margin:5px 0; width:100%; max-width:320px; }
 .section { border:1px solid #ccc; padding:15px; margin:15px 0; border-radius:8px; }
-h3 { margin-top:0; }
 </style>
 </head>
 
 <body>
 
-<!-- 🔐 PIN LOCK -->
 <div id="lockScreen">
   <h2>Owner Access</h2>
   <input type="password" id="pinInput" placeholder="Enter PIN">
   <button onclick="unlock()">Unlock</button>
 </div>
 
-<!-- 👑 DASHBOARD -->
 <div id="dashboard" style="display:none;">
 
 <h2>Owner Master Dashboard</h2>
 
-<!-- 🟢 RESTAURANT STATUS -->
 <div class="section">
 <h3>Restaurant Status</h3>
-<button onclick="openRestaurant()">Open Restaurant</button>
-<button onclick="closeRestaurant()">Close Restaurant</button>
+<button onclick="openRestaurant()">Open</button>
+<button onclick="closeRestaurant()">Close</button>
 <div id="statusInfo"></div>
 </div>
 
-<!-- 👨‍🍳 STAFF MANAGEMENT -->
 <div class="section">
 <h3>Staff Management</h3>
 <input type="text" id="staffName" placeholder="Staff Name">
@@ -48,7 +44,6 @@ h3 { margin-top:0; }
 <div id="staffList"></div>
 </div>
 
-<!-- 🕒 ATTENDANCE REPORT -->
 <div class="section">
 <h3>Attendance Reports</h3>
 
@@ -66,25 +61,27 @@ h3 { margin-top:0; }
 <div id="attendanceReport"></div>
 </div>
 
-<!-- 💰 SALARY SUMMARY -->
 <div class="section">
 <h3>Salary Summary</h3>
 <div id="salarySummary"></div>
 </div>
 
-<!-- 💵 DAILY CLOSING -->
 <div class="section">
-<h3>Daily Closing Entry</h3>
+<h3>Daily Closing</h3>
 <input type="number" id="cashInput" placeholder="Cash Amount">
 <input type="number" id="onlineInput" placeholder="Online Amount">
 <button onclick="saveClosing()">Save Closing</button>
 <div id="closingSummary"></div>
 </div>
 
-<!-- 📊 REVENUE SUMMARY -->
 <div class="section">
 <h3>Today Revenue</h3>
 <div id="revenueSummary"></div>
+</div>
+
+<div class="section">
+<h3>Download Reports</h3>
+<button onclick="downloadFullReport()">Download Full Business Report</button>
 </div>
 
 </div>
